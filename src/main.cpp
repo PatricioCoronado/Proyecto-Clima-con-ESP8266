@@ -1,26 +1,39 @@
-/**
- * Proyecto clima ESP8266
- * Lee datos climáticos de un sensor y los pone en
- * una base de datos.
- * Plataforma ESP8266
- *  Patricio Coronado Collado (PACOCO)
+/*
+ * proyecto: clima ESP8266
+ *  Escribe en una base de datos variables de humedad y temperatura
+ * aplicación: climaESP32-DHT22
+ * plataforma: ESP8266
+ * sensor SHT22
+ * Patricio Coronado
+ * diciembre de 2018
+ * modificado julio 2019
+ * Sensado de temperatura y humedad con DHT22
+ * Los datos se envian a una página con GET para
+ * que los ponga en una base de datos.
  */
+/*************************************************************
+					Ubicación del sensor
+**************************************************************/
+//#define __Pueblo //Para usar la wifi del pueblo
+#define __Madrid //Para usar la wifi de Madrid
+char lugar[]="Madrid-Salon";//en la base de datos será "origen"
 /**************************************************************
-  Dirección de la base de datos y datos de la WIFI
+      Host de la base de datos y datos de la WIFI
  **************************************************************/
-#define BASE_DE_DATOS sprintf(web,"http://patriciocoronadocollado.000webhostapp.com/clima.php/?valor1=%f&valor2=%f&ubicacion=%s",temperatura,humedad,lugar);
-#define WIFI_PUEBLO WiFiMulti.addAP("FX-991SP","Doniga_93");
-#define WIFI_MADRID WiFiMulti.addAP("router_no_encontrado", "RoloTomasi8086");
+#define HOST sprintf(web,"URL/?valor1=%f&valor2=%f&ubicacion=%s",temperatura,humedad,lugar);
+/**************************************************************
+                    WIFI a utilizar
+ **************************************************************/
+#ifdef __Pueblo
+  #define WIFI WiFiMulti.addAP("SSID2","password2");
+#endif
+#ifdef __Madrid
+  #define WIFI WiFiMulti.addAP("SSID1","password1");
+#endif
 /**************************************************************
             Tiempo en deepsleep
  **************************************************************/
-#define SEGUNDOS_DEEPSLEEP 60*30 //Media Hora
-/*************************************************************
-					ubicación del sensor
-**************************************************************/
-#define __Pueblo //Para usar la wifi del pueblo
-//#define __Madrid //Para usar la wifi de Madrid
-char lugar[]="Pueblo-Desvan";
+#define SEGUNDOS_DEEPSLEEP 1800 //Media Hora
 /************************************************************
     Sensor a utilizar. Comentar el que no sea
  ************************************************************/
@@ -40,7 +53,7 @@ void entra_en_modo_deepsleep(int);
 void imprime_variables(void);
 boolean lee_sensor_dht22(void);
 /*************************************************************
-//declaracines para el sensor DHT22
+//declaracines para el sensor DHT22 y pin
 **************************************************************/
 #ifdef __DHT22
   #include "DHTesp.h" 
@@ -68,8 +81,8 @@ boolean lee_sensor_dht22(void);
 float temperatura,humedad;
 char web[256]; //para ala URL
 boolean lecturaSensor=false;//Para comprobar la lectura del DHT22
-bool depuracion=false;//true para depurar por el serial
-//bool depuracion=true;//true para depurar por el serial
+//bool depuracion=false;//true para depurar por el serial
+bool depuracion=true;//true para depurar por el serial
 
 /*************************************************************
  * Macros (no se usan)
@@ -85,21 +98,19 @@ ESP8266WiFiMulti WiFiMulti;
 *************************************************************/
 void setup() 
 {
-  
-  Serial.begin(76800);
+    Serial.begin(76800);
   Serial.flush();
-  #ifdef __Madrid
-      WIFI_MADRID
-  #endif
-  #ifdef __Pueblo
-      WIFI_PUEBLO
-  #endif
+  WIFI //Define la wifi a utilizar
   #ifdef __DHT22
     dht.setup(DHTPIN, DHTesp::DHT22); //Inicializa el DHT22
   #endif
 }
+/*************************************************************
+						LOOP
+*************************************************************/
 void loop()
  {
+   //Lee el sensor
    #ifdef __SHT11
     humedad = sht1x.readHumidity();
     temperatura = sht1x.readTemperatureC();
@@ -138,7 +149,7 @@ void loop()
       WiFiClient client;
       HTTPClient http;
       if(depuracion) Serial.print("[HTTP] begin...\n");
-		  BASE_DE_DATOS //dirección de la base de datos en web
+		  HOST //dirección de la base de datos en web
       http.begin(client,web); //HTTP
       if(depuracion) Serial.print("[HTTP] GET...\n");
       // start connection and send HTTP header
